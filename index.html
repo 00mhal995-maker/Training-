@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
-    <title>اختبار الاستماع - Step</title>
+    <title>اختبار الاستماع - لوحة التحكم</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         body {
@@ -36,7 +36,7 @@
             margin-bottom: 6px;
             font-weight: 600;
         }
-        input[type="text"], select {
+        input[type="text"], input[type="password"], select {
             width: 100%;
             box-sizing: border-box;
             padding: 10px 12px;
@@ -146,50 +146,60 @@
 <body>
 <div class="container">
 
-    <div id="intro-section">
-        <h1>اختبار الاستماع</h1>
-        <p class="subtitle">
-            الرجاء إدخال الاسم والشعبة قبل بدء الاختبار. سيتم تسجيل الدرجة ووقت الحل في لوحة التحكم.
-        </p>
+    <div id="login-section">
+        <h1>لوحة تحكم المعلم</h1>
+        <p class="subtitle">أدخل كلمة السر للوصول إلى لوحة التحكم</p>
 
         <div class="form-group">
-            <label for="studentName">اسم الطالب</label>
-            <input type="text" id="studentName" placeholder="مثال: محمد علي" />
+            <label for="adminPassword">كلمة السر</label>
+            <input type="password" id="adminPassword" placeholder="أدخل كلمة السر" />
         </div>
 
-        <div class="form-group">
-            <label for="studentSection">الشعبة</label>
-            <input type="text" id="studentSection" placeholder="مثال: شعبة 101" />
-        </div>
-
-        <button class="btn-primary" id="startBtn">ابدأ الاختبار</button>
+        <button class="btn-primary" id="loginBtn">دخول</button>
+        <div class="status" id="loginStatus" style="color: red;"></div>
     </div>
 
-    <div id="test-section" class="hidden">
-        <div class="header-bar">
-            <div>
-                <h2 style="margin: 0;">قسم الأسئلة</h2>
-                <span class="badge" id="studentInfoBadge"></span>
-            </div>
-            <div class="timer" id="timerDisplay">الوقت: 00:00</div>
+    <div id="admin-section" class="hidden">
+        <h1>لوحة التحكم - نتائج الطلاب</h1>
+
+        <h2>النتائج</h2>
+        <div id="resultsContainer">
+            <!-- سيتم تعبئة النتائج هنا من Firebase -->
         </div>
 
-        <div class="audio-box">
-            <h3 style="margin-top:0;">استمع إلى المقطع التالي:</h3>
-            <!-- الملف الصوتي سيتم تحميله هنا عبر Firebase -->
-            <audio id="listeningAudio" controls>
-                <source id="audioSource" type="audio/mpeg" />
-                المتصفح لا يدعم تشغيل الصوت.
-            </audio>
+        <h2>إضافة أسئلة</h2>
+        <div class="form-group">
+            <label for="questionText">نص السؤال</label>
+            <input type="text" id="questionText" placeholder="مثال: What is the main idea of the audio?" />
         </div>
-
-        <div id="questionsContainer">
-            <!-- سيتم تعبئة الأسئلة ديناميكياً من Firebase -->
+        <div class="form-group">
+            <label for="optionA">الاختيار الأول (A)</label>
+            <input type="text" id="optionA" placeholder="الخيار A" />
         </div>
+        <div class="form-group">
+            <label for="optionB">الاختيار الثاني (B)</label>
+            <input type="text" id="optionB" placeholder="الخيار B" />
+        </div>
+        <div class="form-group">
+            <label for="optionC">الاختيار الثالث (C)</label>
+            <input type="text" id="optionC" placeholder="الخيار C" />
+        </div>
+        <div class="form-group">
+            <label for="optionD">الاختيار الرابع (D)</label>
+            <input type="text" id="optionD" placeholder="الخيار D" />
+        </div>
+        <div class="form-group">
+            <label for="correctOption">الإجابة الصحيحة</label>
+            <select id="correctOption">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+            </select>
+        </div>
+        <button class="btn-primary" id="addQuestionBtn">إضافة السؤال</button>
+        <div class="status" id="questionStatus" style="color: red;"></div>
 
-        <button class="btn-primary" id="submitBtn">إرسال وإنهاء الاختبار</button>
-
-        <div id="resultBox" class="result-box hidden"></div>
     </div>
 
     <div class="footer-note">
@@ -200,7 +210,6 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
 <script>
     // إعداد Firebase
     const firebaseConfig = {
@@ -217,191 +226,87 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const introSection = document.getElementById('intro-section');
-    const testSection = document.getElementById('test-section');
-    const startBtn = document.getElementById('startBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const studentNameInput = document.getElementById('studentName');
-    const studentSectionInput = document.getElementById('studentSection');
-    const questionsContainer = document.getElementById('questionsContainer');
-    const resultBox = document.getElementById('resultBox');
-    const studentInfoBadge = document.getElementById('studentInfoBadge');
-    const timerDisplay = document.getElementById('timerDisplay');
+    const loginSection = document.getElementById('login-section');
+    const adminSection = document.getElementById('admin-section');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginStatus = document.getElementById('loginStatus');
+    const adminPasswordInput = document.getElementById('adminPassword');
 
-    let questions = [];
-    let startTime = null;
-    let timerInterval = null;
-    let currentStudent = {
-        name: '',
-        section: ''
-    };
+    const resultsContainer = document.getElementById('resultsContainer');
+    const questionText = document.getElementById('questionText');
+    const optionA = document.getElementById('optionA');
+    const optionB = document.getElementById('optionB');
+    const optionC = document.getElementById('optionC');
+    const optionD = document.getElementById('optionD');
+    const correctOption = document.getElementById('correctOption');
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const questionStatus = document.getElementById('questionStatus');
 
-    // تحميل الأسئلة من Firebase
-    function loadQuestions() {
-        questionsContainer.innerHTML = "<p>جاري تحميل الأسئلة...</p>";
-        db.ref('questions').once('value')
-            .then(snapshot => {
-                questions = [];
-                snapshot.forEach(child => {
-                    const q = child.val();
-                    questions.push({
-                        id: child.key,
-                        text: q.text,
-                        options: q.options,
-                        correctIndex: q.correctIndex
-                    });
-                });
+    const correctPassword = "0577549712"; // كلمة السر الخاصة بلوحة التحكم
 
-                if (questions.length === 0) {
-                    questionsContainer.innerHTML = "<p style='color:#b91c1c;'>لا توجد أسئلة مضافة حتى الآن. تواصل مع المعلم.</p>";
-                } else {
-                    renderQuestions();
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                questionsContainer.innerHTML = "<p style='color:#b91c1c;'>حدث خطأ أثناء تحميل الأسئلة.</p>";
-            });
-    }
-
-    // رسم الأسئلة في الصفحة
-    function renderQuestions() {
-        questionsContainer.innerHTML = '';
-        questions.forEach((q, index) => {
-            const card = document.createElement('div');
-            card.className = 'question-card';
-
-            const title = document.createElement('div');
-            title.className = 'question-title';
-            title.textContent = `السؤال ${index + 1}: ${q.text}`;
-            card.appendChild(title);
-
-            const ul = document.createElement('ul');
-            ul.className = 'options';
-
-            q.options.forEach((opt, optIndex) => {
-                const li = document.createElement('li');
-                const label = document.createElement('label');
-
-                const input = document.createElement('input');
-                input.type = 'radio';
-                input.name = `q_${q.id}`;
-                input.value = optIndex;
-
-                label.appendChild(input);
-                label.appendChild(document.createTextNode(opt));
-
-                li.appendChild(label);
-                ul.appendChild(li);
-            });
-
-            card.appendChild(ul);
-            questionsContainer.appendChild(card);
-        });
-    }
-
-    // تشغيل المؤقت
-    function startTimer() {
-        startTime = new Date();
-        timerInterval = setInterval(() => {
-            const now = new Date();
-            const diff = Math.floor((now - startTime) / 1000); // بالثواني
-            const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
-            const seconds = String(diff % 60).padStart(2, '0');
-            timerDisplay.textContent = `الوقت: ${minutes}:${seconds}`;
-        }, 1000);
-    }
-
-    // إيقاف المؤقت وحساب مدة الحل
-    function stopTimer() {
-        if (!startTime) return 0;
-        clearInterval(timerInterval);
-        const endTime = new Date();
-        const diffSeconds = Math.floor((endTime - startTime) / 1000);
-        return diffSeconds;
-    }
-
-    // عند الضغط على "ابدأ الاختبار"
-    startBtn.addEventListener('click', () => {
-        const name = studentNameInput.value.trim();
-        const section = studentSectionInput.value.trim();
-
-        if (!name || !section) {
-            alert('يرجى إدخال الاسم والشعبة.');
-            return;
+    // التحقق من كلمة السر
+    loginBtn.addEventListener('click', () => {
+        const enteredPassword = adminPasswordInput.value.trim();
+        if (enteredPassword === correctPassword) {
+            loginStatus.textContent = '';
+            loginSection.classList.add('hidden');
+            adminSection.classList.remove('hidden');
+            loadResults();
+        } else {
+            loginStatus.textContent = 'كلمة السر غير صحيحة. حاول مرة أخرى.';
         }
-
-        currentStudent.name = name;
-        currentStudent.section = section;
-
-        studentInfoBadge.textContent = `${name} - ${section}`;
-
-        introSection.classList.add('hidden');
-        testSection.classList.remove('hidden');
-        resultBox.classList.add('hidden');
-
-        loadQuestions();
-        startTimer();
     });
 
-    // عند إرسال الاختبار
-    submitBtn.addEventListener('click', () => {
-        if (questions.length === 0) {
-            alert('لا توجد أسئلة للإرسال.');
-            return;
-        }
-
-        if (!confirm('هل أنت متأكد من إرسال الاختبار؟ لن تتمكن من التعديل بعد الإرسال.')) {
-            return;
-        }
-
-        const durationSeconds = stopTimer();
-        let score = 0;
-        const total = questions.length;
-        const answers = {};
-
-        questions.forEach(q => {
-            const selected = document.querySelector(`input[name="q_${q.id}"]:checked`);
-            const selectedIndex = selected ? parseInt(selected.value) : null;
-            const isCorrect = selectedIndex === q.correctIndex;
-
-            if (isCorrect) score++;
-
-            answers[q.id] = {
-                selectedIndex: selectedIndex,
-                correctIndex: q.correctIndex
-            };
+    // تحميل نتائج الطلاب من Firebase
+    function loadResults() {
+        db.ref('results').on('value', snapshot => {
+            const results = snapshot.val();
+            resultsContainer.innerHTML = ''; // مسح النتائج السابقة
+            for (let key in results) {
+                const result = results[key];
+                const resultDiv = document.createElement('div');
+                resultDiv.innerHTML = `
+                    <p>الاسم: ${result.studentName} - الشعبة: ${result.studentSection}</p>
+                    <p>الدرجة: ${result.score} من ${result.total}</p>
+                    <p>الوقت: ${result.durationSeconds} ثانية</p>
+                `;
+                resultsContainer.appendChild(resultDiv);
+            }
         });
+    }
 
-        // حفظ النتيجة في Firebase
-        const resultData = {
-            studentName: currentStudent.name,
-            studentSection: currentStudent.section,
-            score: score,
-            total: total,
-            durationSeconds: durationSeconds,
-            submittedAt: new Date().toISOString(),
-            answers: answers
+    // إضافة سؤال جديد
+    addQuestionBtn.addEventListener('click', () => {
+        const question = questionText.value.trim();
+        const optA = optionA.value.trim();
+        const optB = optionB.value.trim();
+        const optC = optionC.value.trim();
+        const optD = optionD.value.trim();
+        const correctOpt = correctOption.value;
+
+        if (!question || !optA || !optB || !optC || !optD) {
+            questionStatus.textContent = 'يرجى تعبئة جميع الحقول.';
+            return;
+        }
+
+        const newQuestion = {
+            text: question,
+            options: [optA, optB, optC, optD],
+            correctIndex: ['A', 'B', 'C', 'D'].indexOf(correctOpt)
         };
 
-        db.ref('results').push(resultData)
+        db.ref('questions').push(newQuestion)
             .then(() => {
-                const minutes = Math.floor(durationSeconds / 60);
-                const seconds = durationSeconds % 60;
-
-                resultBox.innerHTML = `
-                    <strong>تم إرسال الاختبار بنجاح ✅</strong><br/>
-                    درجتك: ${score} من ${total}<br/>
-                    زمن الحل: ${minutes} دقيقة و ${seconds} ثانية
-                `;
-                resultBox.classList.remove('hidden');
-                submitBtn.disabled = true;
-                submitBtn.textContent = "تم الإرسال";
+                questionStatus.textContent = 'تم إضافة السؤال بنجاح!';
+                questionText.value = '';
+                optionA.value = '';
+                optionB.value = '';
+                optionC.value = '';
+                optionD.value = '';
+                correctOption.value = 'A';
             })
-            .catch(err => {
-                console.error(err);
-                alert('حدث خطأ أثناء حفظ النتيجة. حاول مرة أخرى.');
-                startTimer(); // في حال فشل الحفظ نعيد المؤقت
+            .catch(error => {
+                questionStatus.textContent = 'حدث خطأ أثناء إضافة السؤال.';
             });
     });
 </script>
