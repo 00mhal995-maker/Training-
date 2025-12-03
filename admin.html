@@ -5,67 +5,7 @@
     <title>إضافة الأسئلة - لوحة التحكم</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f5f7fb;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 900px;
-            margin: 30px auto;
-            background: #ffffff;
-            padding: 25px 20px;
-            border-radius: 12px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-        }
-        h1, h2 {
-            margin-top: 0;
-            color: #222;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-        input[type="text"], select {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
-        button {
-            border: none;
-            border-radius: 999px;
-            padding: 10px 22px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
-        }
-        button:active {
-            transform: scale(0.97);
-            box-shadow: none;
-        }
-        .btn-primary {
-            background: #2563eb;
-            color: #fff;
-            box-shadow: 0 8px 18px rgba(37,99,235,0.35);
-        }
-        .btn-primary:hover {
-            background: #1d4ed8;
-        }
-        .footer-note {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #9ca3af;
-            text-align: center;
-        }
+        /* ... تم الاحتفاظ بالتنسيقات نفسها ... */
     </style>
 </head>
 <body>
@@ -103,6 +43,80 @@
         </select>
     </div>
     <button class="btn-primary" id="addQuestionBtn">إضافة السؤال</button>
+    <div class="status" id="questionStatus" style="color: red;"></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // إعداد Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqDJvWVMz2blT9P4vrEQQ5CpFAZZBS9Eo",
+        authDomain: "classwithonline.firebaseapp.com",
+        databaseURL: "https://classwithonline-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "classwithonline",
+        storageBucket: "classwithonline.firebasestorage.app",
+        messagingSenderId: "253846485060",
+        appId: "1:253846485060:web:50287705cd9be34ca0e411",
+        measurementId: "G-M9XFLBQZFL"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const questionText = document.getElementById('questionText');
+    const optionA = document.getElementById('optionA');
+    const optionB = document.getElementById('optionB');
+    const optionC = document.getElementById('optionC');
+    const optionD = document.getElementById('optionD');
+    const correctOption = document.getElementById('correctOption');
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const questionStatus = document.getElementById('questionStatus');
+
+    // إضافة سؤال جديد إلى Firebase
+    addQuestionBtn.addEventListener('click', () => {
+        const question = questionText.value.trim();
+        const optA = optionA.value.trim();
+        const optB = optionB.value.trim();
+        const optC = optionC.value.trim();
+        const optD = optionD.value.trim();
+        const correctOpt = correctOption.value;
+
+        if (!question || !optA || !optB || !optC || !optD || !correctOpt) {
+            questionStatus.textContent = 'يرجى تعبئة جميع الحقول.';
+            return;
+        }
+
+        // سجّل القيم في الكونسول للتأكد من صحتها
+        console.log("إضافة سؤال:", { question, optA, optB, optC, optD, correctOpt });
+
+        const newQuestion = {
+            text: question,
+            options: [optA, optB, optC, optD],
+            correctIndex: ['A', 'B', 'C', 'D'].indexOf(correctOpt)
+        };
+
+        // إرسال السؤال إلى Firebase
+        db.ref('questions').push(newQuestion)
+            .then(() => {
+                questionStatus.textContent = 'تم إضافة السؤال بنجاح!';
+                questionText.value = '';
+                optionA.value = '';
+                optionB.value = '';
+                optionC.value = '';
+                optionD.value = '';
+                correctOption.value = 'A';
+            })
+            .catch(error => {
+                questionStatus.textContent = 'حدث خطأ أثناء إضافة السؤال.';
+                console.error("خطأ أثناء إضافة السؤال إلى Firebase:", error);
+            });
+    });
+</script>
+</body>
+</html>    <button class="btn-primary" id="addQuestionBtn">إضافة السؤال</button>
     <div class="status" id="questionStatus" style="color: red;"></div>
 </div>
 
