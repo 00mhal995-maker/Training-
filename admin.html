@@ -144,10 +144,13 @@
         const optD = optionD.value.trim();
         const correctOpt = correctOption.value;
 
-        if (!question || !optA || !optB || !optC || !optD) {
+        if (!question || !optA || !optB || !optC || !optD || !correctOpt) {
             questionStatus.textContent = 'يرجى تعبئة جميع الحقول.';
             return;
         }
+
+        // سجّل القيم في الكونسول للتأكد من صحتها
+        console.log("إضافة سؤال:", { question, optA, optB, optC, optD, correctOpt });
 
         const newQuestion = {
             text: question,
@@ -155,6 +158,7 @@
             correctIndex: ['A', 'B', 'C', 'D'].indexOf(correctOpt)
         };
 
+        // إرسال السؤال إلى Firebase
         db.ref('questions').push(newQuestion)
             .then(() => {
                 questionStatus.textContent = 'تم إضافة السؤال بنجاح!';
@@ -167,6 +171,7 @@
             })
             .catch(error => {
                 questionStatus.textContent = 'حدث خطأ أثناء إضافة السؤال.';
+                console.error("خطأ أثناء إضافة السؤال إلى Firebase:", error);
             });
     });
 </script>
