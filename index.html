@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
-    <title>اختبار الاستماع - لوحة التحكم</title>
+    <title>اختبار الاستماع - Step</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         body {
@@ -35,6 +35,378 @@
             display: block;
             margin-bottom: 6px;
             font-weight: 600;
+        }
+        input[type="text"], select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 22px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+        }
+        button:active {
+            transform: scale(0.97);
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(37,99,235,0.35);
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .hidden {
+            display: none;
+        }
+        .audio-box {
+            padding: 15px;
+            background: #f3f4ff;
+            border-radius: 10px;
+            border: 1px solid #d4d7ff;
+            margin-bottom: 20px;
+        }
+        .question-card {
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+        .question-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .options {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .options li {
+            margin-bottom: 6px;
+        }
+        .options label {
+            font-weight: normal;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .options input[type="radio"] {
+            margin-left: 4px;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #075985;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .timer {
+            font-size: 14px;
+            font-weight: 600;
+            color: #16a34a;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: #ecfdf3;
+            border: 1px solid #bbf7d0;
+            color: #14532d;
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div id="intro-section">
+        <h1>اختبار الاستماع</h1>
+        <p class="subtitle">
+            الرجاء إدخال الاسم والشعبة قبل بدء الاختبار. سيتم تسجيل الدرجة ووقت الحل في لوحة التحكم.
+        </p>
+
+        <div class="form-group">
+            <label for="studentName">اسم الطالب</label>
+            <input type="text" id="studentName" placeholder="مثال: محمد علي" />
+        </div>
+
+        <div class="form-group">
+            <label for="studentSection">الشعبة</label>
+            <input type="text" id="studentSection" placeholder="مثال: شعبة 101" />
+        </div>
+
+        <button class="btn-primary" id="startBtn">ابدأ الاختبار</button>
+    </div>
+
+    <div id="test-section" class="hidden">
+        <div class="header-bar">
+            <div>
+                <h2 style="margin: 0;">قسم الأسئلة</h2>
+                <span class="badge" id="studentInfoBadge"></span>
+            </div>
+            <div class="timer" id="timerDisplay">الوقت: 00:00</div>
+        </div>
+
+        <div class="audio-box">
+            <h3 style="margin-top:0;">استمع إلى المقطع التالي:</h3>
+            <!-- الملف الصوتي سيتم تحميله هنا عبر Firebase -->
+            <audio id="listeningAudio" controls>
+                <source id="audioSource" type="audio/mpeg" />
+                المتصفح لا يدعم تشغيل الصوت.
+            </audio>
+        </div>
+
+        <div id="questionsContainer">
+            <!-- سيتم تعبئة الأسئلة ديناميكياً من Firebase -->
+        </div>
+
+        <button class="btn-primary" id="submitBtn">إرسال وإنهاء الاختبار</button>
+
+        <div id="resultBox" class="result-box hidden"></div>
+    </div>
+
+    <div class="footer-note">
+        تم تطوير هذا الاختبار لأغراض تعليمية 💻🎧
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // إعداد Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyCqDJvWVMz2blT9P4vrEQQ5CpFAZZBS9Eo",
+        authDomain: "classwithonline.firebaseapp.com",
+        databaseURL: "https://classwithonline-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "classwithonline",
+        storageBucket: "classwithonline.firebasestorage.app",
+        messagingSenderId: "253846485060",
+        appId: "1:253846485060:web:50287705cd9be34ca0e411",
+        measurementId: "G-M9XFLBQZFL"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const introSection = document.getElementById('intro-section');
+    const testSection = document.getElementById('test-section');
+    const startBtn = document.getElementById('startBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const studentNameInput = document.getElementById('studentName');
+    const studentSectionInput = document.getElementById('studentSection');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const resultBox = document.getElementById('resultBox');
+    const studentInfoBadge = document.getElementById('studentInfoBadge');
+    const timerDisplay = document.getElementById('timerDisplay');
+
+    let questions = [];
+    let startTime = null;
+    let timerInterval = null;
+    let currentStudent = {
+        name: '',
+        section: ''
+    };
+
+    // تحميل الأسئلة من Firebase
+    function loadQuestions() {
+        questionsContainer.innerHTML = "<p>جاري تحميل الأسئلة...</p>";
+        db.ref('questions').once('value')
+            .then(snapshot => {
+                questions = [];
+                snapshot.forEach(child => {
+                    const q = child.val();
+                    questions.push({
+                        id: child.key,
+                        text: q.text,
+                        options: q.options,
+                        correctIndex: q.correctIndex
+                    });
+                });
+
+                if (questions.length === 0) {
+                    questionsContainer.innerHTML = "<p style='color:#b91c1c;'>لا توجد أسئلة مضافة حتى الآن. تواصل مع المعلم.</p>";
+                } else {
+                    renderQuestions();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                questionsContainer.innerHTML = "<p style='color:#b91c1c;'>حدث خطأ أثناء تحميل الأسئلة.</p>";
+            });
+    }
+
+    // رسم الأسئلة في الصفحة
+    function renderQuestions() {
+        questionsContainer.innerHTML = '';
+        questions.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+
+            const title = document.createElement('div');
+            title.className = 'question-title';
+            title.textContent = `السؤال ${index + 1}: ${q.text}`;
+            card.appendChild(title);
+
+            const ul = document.createElement('ul');
+            ul.className = 'options';
+
+            q.options.forEach((opt, optIndex) => {
+                const li = document.createElement('li');
+                const label = document.createElement('label');
+
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `q_${q.id}`;
+                input.value = optIndex;
+
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(opt));
+
+                li.appendChild(label);
+                ul.appendChild(li);
+            });
+
+            card.appendChild(ul);
+            questionsContainer.appendChild(card);
+        });
+    }
+
+    // تشغيل المؤقت
+    function startTimer() {
+        startTime = new Date();
+        timerInterval = setInterval(() => {
+            const now = new Date();
+            const diff = Math.floor((now - startTime) / 1000); // بالثواني
+            const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
+            const seconds = String(diff % 60).padStart(2, '0');
+            timerDisplay.textContent = `الوقت: ${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    // إيقاف المؤقت وحساب مدة الحل
+    function stopTimer() {
+        if (!startTime) return 0;
+        clearInterval(timerInterval);
+        const endTime = new Date();
+        const diffSeconds = Math.floor((endTime - startTime) / 1000);
+        return diffSeconds;
+    }
+
+    // عند الضغط على "ابدأ الاختبار"
+    startBtn.addEventListener('click', () => {
+        const name = studentNameInput.value.trim();
+        const section = studentSectionInput.value.trim();
+
+        if (!name || !section) {
+            alert('يرجى إدخال الاسم والشعبة.');
+            return;
+        }
+
+        currentStudent.name = name;
+        currentStudent.section = section;
+
+        studentInfoBadge.textContent = `${name} - ${section}`;
+
+        introSection.classList.add('hidden');
+        testSection.classList.remove('hidden');
+        resultBox.classList.add('hidden');
+
+        loadQuestions();
+        startTimer();
+    });
+
+    // عند إرسال الاختبار
+    submitBtn.addEventListener('click', () => {
+        if (questions.length === 0) {
+            alert('لا توجد أسئلة للإرسال.');
+            return;
+        }
+
+        if (!confirm('هل أنت متأكد من إرسال الاختبار؟ لن تتمكن من التعديل بعد الإرسال.')) {
+            return;
+        }
+
+        const durationSeconds = stopTimer();
+        let score = 0;
+        const total = questions.length;
+        const answers = {};
+
+        questions.forEach(q => {
+            const selected = document.querySelector(`input[name="q_${q.id}"]:checked`);
+            const selectedIndex = selected ? parseInt(selected.value) : null;
+            const isCorrect = selectedIndex === q.correctIndex;
+
+            if (isCorrect) score++;
+
+            answers[q.id] = {
+                selectedIndex: selectedIndex,
+                correctIndex: q.correctIndex
+            };
+        });
+
+        // حفظ النتيجة في Firebase
+        const resultData = {
+            studentName: currentStudent.name,
+            studentSection: currentStudent.section,
+            score: score,
+            total: total,
+            durationSeconds: durationSeconds,
+            submittedAt: new Date().toISOString(),
+            answers: answers
+        };
+
+        db.ref('results').push(resultData)
+            .then(() => {
+                const minutes = Math.floor(durationSeconds / 60);
+                const seconds = durationSeconds % 60;
+
+                resultBox.innerHTML = `
+                    <strong>تم إرسال الاختبار بنجاح ✅</strong><br/>
+                    درجتك: ${score} من ${total}<br/>
+                    زمن الحل: ${minutes} دقيقة و ${seconds} ثانية
+                `;
+                resultBox.classList.remove('hidden');
+                submitBtn.disabled = true;
+                submitBtn.textContent = "تم الإرسال";
+            })
+            .catch(err => {
+                console.error(err);
+                alert('حدث خطأ أثناء حفظ النتيجة. حاول مرة أخرى.');
+                startTimer(); // في حال فشل الحفظ نعيد المؤقت
+            });
+    });
+</script>
+</body>
+</html>            font-weight: 600;
         }
         input[type="text"], input[type="password"], select {
             width: 100%;
